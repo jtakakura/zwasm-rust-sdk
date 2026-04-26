@@ -1,0 +1,3 @@
+[submodule "crates/zwasm-sys/zwasm"]
+	path = crates/zwasm-sys/zwasm
+	url = https://github.com/clojurewasm/zwasm.git
