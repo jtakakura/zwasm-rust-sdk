@@ -3,6 +3,7 @@ use crate::error;
 use crate::imports;
 use crate::utils;
 use crate::wasi;
+use std::sync::{Arc, Weak};
 
 /// A WebAssembly module instance backed by the zwasm runtime.
 ///
@@ -14,12 +15,64 @@ use crate::wasi;
 /// See the [zwasm project](https://github.com/clojurewasm/zwasm) for details on the underlying engine.
 use zwasm_sys as sys;
 
-pub struct Module {
+struct ModuleInner {
     ptr: *mut sys::zwasm_module_t,
+}
+
+impl Drop for ModuleInner {
+    fn drop(&mut self) {
+        unsafe {
+            sys::zwasm_module_delete(self.ptr);
+        }
+    }
+}
+
+// SAFETY: the native runtime documents cancellation as the only thread-safe module operation.
+// Module itself remains !Send/!Sync; this is only shared so a weak cancel handle can be used
+// from another thread while the owning Module stays alive.
+unsafe impl Send for ModuleInner {}
+unsafe impl Sync for ModuleInner {}
+
+/// A thread-safe handle that can interrupt a running Wasm invocation.
+///
+/// Create this from [`Module::cancel_handle`]. Calling [`Self::cancel`] after the owning
+/// [`Module`] has been dropped becomes a no-op.
+#[derive(Clone)]
+pub struct CancelHandle {
+    inner: Weak<ModuleInner>,
+}
+
+impl CancelHandle {
+    /// Requests cancellation of the currently running Wasm invocation.
+    pub fn cancel(&self) {
+        if let Some(inner) = self.inner.upgrade() {
+            unsafe { sys::zwasm_module_cancel(inner.ptr) };
+        }
+    }
+}
+
+pub struct Module {
+    inner: Arc<ModuleInner>,
     _not_send_sync: std::marker::PhantomData<std::rc::Rc<()>>,
 }
 
 impl Module {
+    fn from_raw(ptr: *mut sys::zwasm_module_t) -> Result<Self, error::ZwasmError> {
+        if ptr.is_null() {
+            Err(error::last_error()
+                .unwrap_or_else(|| error::ZwasmError("Unknown error".to_string())))
+        } else {
+            Ok(Module {
+                inner: Arc::new(ModuleInner { ptr }),
+                _not_send_sync: std::marker::PhantomData,
+            })
+        }
+    }
+
+    fn raw_ptr(&self) -> *mut sys::zwasm_module_t {
+        self.inner.ptr
+    }
+
     /* ================================================================
      * Module lifecycle
      * ================================================================ */
@@ -30,15 +83,7 @@ impl Module {
     pub fn new(wasm_bytes: &[u8]) -> Result<Self, error::ZwasmError> {
         let ptr = unsafe { sys::zwasm_module_new(wasm_bytes.as_ptr(), wasm_bytes.len()) };
 
-        if ptr.is_null() {
-            Err(error::last_error()
-                .unwrap_or_else(|| error::ZwasmError("Unknown error".to_string())))
-        } else {
-            Ok(Module {
-                ptr,
-                _not_send_sync: std::marker::PhantomData,
-            })
-        }
+        Self::from_raw(ptr)
     }
 
     /// Creates a new WASI-enabled module instance from raw Wasm bytes using the zwasm runtime.
@@ -47,15 +92,7 @@ impl Module {
     pub fn new_wasi(wasm_bytes: &[u8]) -> Result<Self, error::ZwasmError> {
         let ptr = unsafe { sys::zwasm_module_new_wasi(wasm_bytes.as_ptr(), wasm_bytes.len()) };
 
-        if ptr.is_null() {
-            Err(error::last_error()
-                .unwrap_or_else(|| error::ZwasmError("Unknown error".to_string())))
-        } else {
-            Ok(Module {
-                ptr,
-                _not_send_sync: std::marker::PhantomData,
-            })
-        }
+        Self::from_raw(ptr)
     }
 
     /// Creates a module with an explicit runtime configuration (memory, fuel, limits, etc).
@@ -69,15 +106,7 @@ impl Module {
             sys::zwasm_module_new_configured(wasm_bytes.as_ptr(), wasm_bytes.len(), config.ptr)
         };
 
-        if ptr.is_null() {
-            Err(error::last_error()
-                .unwrap_or_else(|| error::ZwasmError("Unknown error".to_string())))
-        } else {
-            Ok(Module {
-                ptr,
-                _not_send_sync: std::marker::PhantomData,
-            })
-        }
+        Self::from_raw(ptr)
     }
 
     /// Creates a WASI-enabled module with an explicit WASI configuration.
@@ -95,15 +124,7 @@ impl Module {
             )
         };
 
-        if ptr.is_null() {
-            Err(error::last_error()
-                .unwrap_or_else(|| error::ZwasmError("Unknown error".to_string())))
-        } else {
-            Ok(Module {
-                ptr,
-                _not_send_sync: std::marker::PhantomData,
-            })
-        }
+        Self::from_raw(ptr)
     }
 
     /// Creates a WASI-enabled module with both WASI and runtime configuration.
@@ -123,15 +144,7 @@ impl Module {
             )
         };
 
-        if ptr.is_null() {
-            Err(error::last_error()
-                .unwrap_or_else(|| error::ZwasmError("Unknown error".to_string())))
-        } else {
-            Ok(Module {
-                ptr,
-                _not_send_sync: std::marker::PhantomData,
-            })
-        }
+        Self::from_raw(ptr)
     }
 
     /// Creates a module with host functions registered via [`Imports`].
@@ -145,15 +158,7 @@ impl Module {
             sys::zwasm_module_new_with_imports(wasm_bytes.as_ptr(), wasm_bytes.len(), imports.ptr)
         };
 
-        if ptr.is_null() {
-            Err(error::last_error()
-                .unwrap_or_else(|| error::ZwasmError("Unknown error".to_string())))
-        } else {
-            Ok(Module {
-                ptr,
-                _not_send_sync: std::marker::PhantomData,
-            })
-        }
+        Self::from_raw(ptr)
     }
 
     /// Validates raw Wasm bytes for correctness according to the Wasm spec, without instantiating a module.
@@ -191,7 +196,7 @@ impl Module {
 
         let ok = unsafe {
             sys::zwasm_module_invoke(
-                self.ptr,
+                self.raw_ptr(),
                 c_name.as_ptr(),
                 if args.is_empty() {
                     std::ptr::null_mut()
@@ -224,7 +229,7 @@ impl Module {
     /// This method is safe to call from Rust, but it executes in the native runtime.
     /// The same aliasing/concurrency requirements as [`Self::invoke`] apply.
     pub fn invoke_start(&self) -> Result<(), error::ZwasmError> {
-        let ok = unsafe { sys::zwasm_module_invoke_start(self.ptr) };
+        let ok = unsafe { sys::zwasm_module_invoke_start(self.raw_ptr()) };
 
         if !ok {
             Err(error::last_error()
@@ -240,14 +245,14 @@ impl Module {
 
     /// Returns the number of exported functions in the module.
     pub fn export_count(&self) -> u32 {
-        unsafe { sys::zwasm_module_export_count(self.ptr) }
+        unsafe { sys::zwasm_module_export_count(self.raw_ptr()) }
     }
 
     /// Returns the export name at `index`, if present.
     ///
     /// Returns `None` if the index is out of bounds.
     pub fn export_name(&self, index: u32) -> Option<String> {
-        let ptr = unsafe { sys::zwasm_module_export_name(self.ptr, index) };
+        let ptr = unsafe { sys::zwasm_module_export_name(self.raw_ptr(), index) };
 
         if ptr.is_null() {
             None
@@ -264,14 +269,21 @@ impl Module {
     ///
     /// Parameters are always 64-bit values.
     pub fn export_param_count(&self, index: u32) -> u32 {
-        unsafe { sys::zwasm_module_export_param_count(self.ptr, index) }
+        unsafe { sys::zwasm_module_export_param_count(self.raw_ptr(), index) }
     }
 
     /// Returns the number of results for the export at `index`.
     ///
     /// Results are always 64-bit values.
     pub fn export_result_count(&self, index: u32) -> u32 {
-        unsafe { sys::zwasm_module_export_result_count(self.ptr, index) }
+        unsafe { sys::zwasm_module_export_result_count(self.raw_ptr(), index) }
+    }
+
+    /// Returns a thread-safe cancellation handle for this module.
+    pub fn cancel_handle(&self) -> CancelHandle {
+        CancelHandle {
+            inner: Arc::downgrade(&self.inner),
+        }
     }
 
     /// Requests cancellation of currently running Wasm execution in this module.
@@ -280,7 +292,7 @@ impl Module {
     /// Cancellation behavior is implemented by the native runtime. Callers should only use
     /// this as an asynchronous signal and must not assume immediate termination semantics.
     pub fn cancel(&self) {
-        unsafe { sys::zwasm_module_cancel(self.ptr) };
+        self.cancel_handle().cancel();
     }
 
     /* ================================================================
@@ -296,7 +308,7 @@ impl Module {
     /// the memory is not mutated or invalidated (for example by invocation or memory growth)
     /// while this slice is alive.
     pub unsafe fn memory_data(&self) -> Option<&[u8]> {
-        let ptr = unsafe { sys::zwasm_module_memory_data(self.ptr) };
+        let ptr = unsafe { sys::zwasm_module_memory_data(self.raw_ptr()) };
 
         if ptr.is_null() {
             None
@@ -318,7 +330,7 @@ impl Module {
 
     /// Returns the current linear memory size in bytes.
     pub fn memory_size(&self) -> usize {
-        unsafe { sys::zwasm_module_memory_size(self.ptr) }
+        unsafe { sys::zwasm_module_memory_size(self.raw_ptr()) }
     }
 
     /// Reads bytes from the module's linear memory into `buf`.
@@ -328,7 +340,8 @@ impl Module {
     /// same aliasing/concurrency requirements as [`Self::invoke`] apply.
     pub fn memory_read(&self, offset: u32, buf: &mut [u8]) -> Result<(), error::ZwasmError> {
         let len = utils::to_u32_len(buf.len())?;
-        let ok = unsafe { sys::zwasm_module_memory_read(self.ptr, offset, len, buf.as_mut_ptr()) };
+        let ok =
+            unsafe { sys::zwasm_module_memory_read(self.raw_ptr(), offset, len, buf.as_mut_ptr()) };
 
         if !ok {
             Err(error::last_error()
@@ -345,7 +358,8 @@ impl Module {
     /// same aliasing/concurrency requirements as [`Self::invoke`] apply.
     pub fn memory_write(&self, offset: u32, data: &[u8]) -> Result<(), error::ZwasmError> {
         let len = utils::to_u32_len(data.len())?;
-        let ok = unsafe { sys::zwasm_module_memory_write(self.ptr, offset, data.as_ptr(), len) };
+        let ok =
+            unsafe { sys::zwasm_module_memory_write(self.raw_ptr(), offset, data.as_ptr(), len) };
 
         if !ok {
             Err(error::last_error()
@@ -370,14 +384,6 @@ impl Module {
             }
         }
         Err(error::ZwasmError(format!("export not found: {name}")))
-    }
-}
-
-impl Drop for Module {
-    fn drop(&mut self) {
-        unsafe {
-            sys::zwasm_module_delete(self.ptr);
-        }
     }
 }
 
@@ -513,5 +519,16 @@ mod tests {
             "memory_data == None for no-memory"
         );
         assert_eq!(module.memory_size(), 0, "memory_size == 0 for no-memory");
+    }
+
+    #[test]
+    fn test_cancel_handle_after_module_drop_is_noop() {
+        let handle = {
+            let module =
+                Module::new(test_fixtures::RETURN42_WASM).expect("Failed to create module");
+            module.cancel_handle()
+        };
+
+        handle.cancel();
     }
 }

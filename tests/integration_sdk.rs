@@ -1,5 +1,8 @@
 mod common;
 
+use std::thread;
+use std::time::{Duration, Instant};
+
 use zwasm_sdk::{Config, Imports, Module, WasiConfig};
 
 #[test]
@@ -100,4 +103,36 @@ fn wasi_config_rejects_nul_bytes() {
     assert!(wasi.set_env(&[("KEY", "v\0")]).is_err());
     assert!(wasi.preopen_dir(".\0", "/sandbox").is_err());
     assert!(wasi.preopen_dir(".", "/sa\0ndbox").is_err());
+}
+
+#[test]
+fn cancel_handle_interrupts_running_invoke() {
+    let mut config = Config::new().expect("config creation should succeed");
+    config.set_cancelable(true);
+
+    let module = Module::new_configured(common::INFINITE_LOOP_WASM, &config)
+        .expect("loop module should be created");
+    let cancel_handle = module.cancel_handle();
+    let started = Instant::now();
+
+    let cancel_thread = thread::spawn(move || {
+        thread::sleep(Duration::from_micros(100));
+        for _ in 0..200 {
+            cancel_handle.cancel();
+            thread::sleep(Duration::from_micros(100));
+        }
+    });
+
+    let err = module
+        .invoke("loop", &[])
+        .expect_err("infinite loop should only return via cancellation");
+
+    cancel_thread.join().expect("cancel thread should join");
+
+    assert!(
+        err.is_interrupted(),
+        "expected interrupted error, got: {err}"
+    );
+    assert!(err.is_canceled(), "expected canceled error, got: {err}");
+    assert!(started.elapsed() < Duration::from_secs(2));
 }

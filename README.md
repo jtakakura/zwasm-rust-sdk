@@ -60,9 +60,17 @@ cargo run --example memory_io
 cargo run --example wasi_config
 ```
 
+## Cancellation and Interruption
+
+Use [`Config::set_cancelable(true)`](https://docs.rs/zwasm-sdk/latest/zwasm_sdk/struct.Config.html) when you want running Wasm to be interruptible from another thread.
+
+When cancellation checks are enabled, you can obtain a thread-safe `CancelHandle` from `Module::cancel_handle()` and call `cancel()` from another thread or task. A running `invoke()` then returns an error that can be classified with `ZwasmError::is_interrupted()` or `ZwasmError::is_canceled()`.
+
 ## Safety and Usage Notes
 
 zwasm-sdk provides a safe, ergonomic API for most use cases. All FFI unsafety is encapsulated. For advanced or low-level usage, see zwasm-sys.
+
+`CancelHandle` is the intended way to interrupt a running invocation from another thread. Other module operations remain single-threaded.
 
 ## API Reference
 

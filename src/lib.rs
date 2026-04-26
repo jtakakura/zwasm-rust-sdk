@@ -8,6 +8,7 @@
 //! - **Component Model**: WIT parser, Canonical ABI, WASI Preview 1+2, component linking.
 //! - **Security**: Deny-by-default WASI, capability flags, resource limits.
 //! - **Zero dependencies**: Pure Zig core, no libc required.
+//! - **Interruption support**: cancel a running invocation from another thread with [`CancelHandle`].
 //!
 //! ## Supported platforms
 //! - Linux (x86_64, aarch64)
@@ -30,6 +31,10 @@
 //!     Ok(())
 //! }
 //! ```
+//!
+//! For long-running Wasm, enable cancellation in [`Config`] and use [`Module::cancel_handle`]
+//! to interrupt an in-progress invocation from another thread. Interrupted calls can be
+//! recognized with [`ZwasmError::is_interrupted`].
 //!
 //! ## Design
 //! zwasm uses a 4-tier execution pipeline:
@@ -58,7 +63,7 @@ mod wasi;
 pub use config::Config;
 pub use error::ZwasmError;
 pub use imports::Imports;
-pub use module::Module;
+pub use module::{CancelHandle, Module};
 pub use wasi::WasiConfig;
 
 #[cfg(test)]
