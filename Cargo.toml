@@ -1,6 +1,13 @@
 [package]
+categories = ["api-bindings", "wasm"]
+description = "A safe and ergonomic Rust binding for the zwasm WebAssembly runtime, supporting Wasm 3.0, WASI, and host function imports."
+documentation = "https://docs.rs/zwasm-sdk"
+edition = "2021"
+exclude = ["examples/"]
+license = "MIT"
 name = "zwasm-sdk"
+readme = "README.md"
+repository = "https://github.com/jtakakura/zwasm-rust-sdk"
 version = "0.1.0"
-edition = "2024"
 
 [dependencies]
