@@ -1,6 +1,13 @@
 [package]
+categories = ["api-bindings", "wasm"]
+description = "A low-level Rust binding to the zwasm C API, providing FFI access to the zwasm WebAssembly runtime."
+documentation = "https://docs.rs/zwasm-sys"
+edition = "2021"
+license = "MIT"
+links = "zwasm"
 name = "zwasm-sys"
+readme = "README.md"
+repository = "https://github.com/jtakakura/zwasm-rust-sdk"
 version = "0.1.0"
-edition = "2024"
 
 [dependencies]
