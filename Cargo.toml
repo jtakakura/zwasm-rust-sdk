@@ -11,3 +11,9 @@ repository = "https://github.com/jtakakura/zwasm-rust-sdk"
 version = "0.1.0"
 
 [dependencies]
+zwasm-sys = { path = "crates/zwasm-sys", version = "0.1.0" }
+
+[workspace]
+members = [
+    "crates/zwasm-sys",
+]
