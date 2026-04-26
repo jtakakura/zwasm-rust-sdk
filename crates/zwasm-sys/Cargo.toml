@@ -1,4 +1,5 @@
 [package]
+build = "build.rs"
 categories = ["api-bindings", "wasm"]
 description = "A low-level Rust binding to the zwasm C API, providing FFI access to the zwasm WebAssembly runtime."
 documentation = "https://docs.rs/zwasm-sys"
@@ -11,3 +12,6 @@ repository = "https://github.com/jtakakura/zwasm-rust-sdk"
 version = "0.1.0"
 
 [dependencies]
+
+[build-dependencies]
+bindgen = { version = "0.72.1", default-features = false, features = ["runtime"] }
