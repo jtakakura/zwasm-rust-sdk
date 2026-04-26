@@ -15,12 +15,20 @@
 //! - Windows (x86_64)
 //!
 //! ## Example
-//! ```rust
+//! ```no_run
 //! use zwasm_sdk::{Module};
-//! let wasm_bytes = include_bytes!("minimal.wasm");
-//! let module = Module::new(wasm_bytes)?;
-//! let results = module.invoke("f", &[])?;
-//! assert_eq!(results[0], 42);
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let wasm_bytes: &[u8] = &[
+//!         0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x01, 0x60, 0x00, 0x01,
+//!         0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x05, 0x01, 0x01, 0x66, 0x00, 0x00, 0x0a, 0x06,
+//!         0x01, 0x04, 0x00, 0x41, 0x2a, 0x0b,
+//!     ];
+//!     let module = Module::new(wasm_bytes)?;
+//!     let results = module.invoke("f", &[])?;
+//!     assert_eq!(results[0], 42);
+//!     Ok(())
+//! }
 //! ```
 //!
 //! ## Design
@@ -28,6 +36,13 @@
 //! - Bytecode → Predecoded IR → Register IR → Native JIT (ARM64/x86_64)
 //! - All Wasm 3.0 proposals, threads, SIMD, GC, exception handling supported
 //! - Allocator-parameterized: caller controls memory allocation
+//!
+//! ## Examples
+//! See practical examples in the repository:
+//! - `examples/run_wasm.rs`
+//! - `examples/host_imports.rs`
+//! - `examples/memory_io.rs`
+//! - `examples/wasi_config.rs`
 //!
 //! See the upstream [README](https://github.com/clojurewasm/zwasm) and [ARCHITECTURE.md](https://github.com/clojurewasm/zwasm/blob/main/ARCHITECTURE.md) for details.
 mod config;
