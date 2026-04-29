@@ -15,7 +15,7 @@ A recent stable Rust compiler is recommended. (Rust 2021 edition)
 
 | zwasm-sdk | zwasm-sys | zwasm C API |
 |-----------|-----------|-------------|
-| 0.1.x     | 0.1.x     | 1.10.x      |
+| 0.1.x     | 0.1.x     | 1.11.x      |
 
 ## Usage
 

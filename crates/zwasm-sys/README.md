@@ -29,7 +29,7 @@ zwasm-sys = "0.1"
 
 | zwasm-sys | zwasm C API |
 |-----------|-------------|
-| 0.1.0     | 1.10.0      |
+| 0.1.0     | 1.11.0      |
 
 ## ⚠️ Safety and Usage Notes
 
