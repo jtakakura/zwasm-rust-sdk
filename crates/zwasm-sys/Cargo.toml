@@ -10,8 +10,21 @@ name = "zwasm-sys"
 readme = "README.md"
 repository = "https://github.com/jtakakura/zwasm-rust-sdk"
 version = "0.1.0"
+include = [
+    "Cargo.toml",
+    "LICENSE*",
+    "README*",
+    "build.rs",
+    "src/**/*",
+    "zwasm/build.zig",
+    "zwasm/build.zig.zon",
+    "zwasm/include/**/*",
+    "zwasm/src/**/*",
+]
 
 [dependencies]
 
 [build-dependencies]
-bindgen = { version = "0.72.1", default-features = false, features = ["runtime"] }
+bindgen = { version = "0.72.1", default-features = false, features = [
+    "runtime",
+] }
