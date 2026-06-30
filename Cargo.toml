@@ -3,7 +3,6 @@ categories = ["api-bindings", "wasm"]
 description = "A safe and ergonomic Rust binding for the zwasm WebAssembly runtime, supporting Wasm 3.0, WASI, and host function imports."
 documentation = "https://docs.rs/zwasm-sdk"
 edition = "2021"
-exclude = ["examples/"]
 license = "MIT"
 name = "zwasm-sdk"
 readme = "README.md"
@@ -15,9 +14,7 @@ zwasm-sys = { path = "crates/zwasm-sys", version = "0.1.0" }
 thiserror = "2.0.18"
 
 [dev-dependencies]
-nix = { version = "0.31.2", features = ["fs"]}
+nix = { version = "0.31.2", features = ["fs"] }
 
 [workspace]
-members = [
-    "crates/zwasm-sys",
-]
+members = ["crates/zwasm-sys"]
