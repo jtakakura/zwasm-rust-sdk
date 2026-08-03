@@ -2,42 +2,44 @@ use thiserror::Error;
 use zwasm_sys as sys;
 
 #[derive(Error, Debug)]
-#[error("ZwasmError: {0}")]
-pub struct ZwasmError(pub String);
+pub enum Error {
+    #[error("{0}")]
+    Message(String),
 
-impl ZwasmError {
-    /// Returns `true` when execution was interrupted by host cancellation or timeout.
-    pub fn is_interrupted(&self) -> bool {
-        self.is_canceled() || self.is_timeout_exceeded()
-    }
-
-    /// Returns `true` when execution was canceled by the host.
-    pub fn is_canceled(&self) -> bool {
-        contains_case_insensitive(&self.0, "execution canceled")
-            || contains_case_insensitive(&self.0, "canceled")
-    }
-
-    /// Returns `true` when execution stopped because the configured timeout elapsed.
-    pub fn is_timeout_exceeded(&self) -> bool {
-        contains_case_insensitive(&self.0, "execution timed out")
-            || contains_case_insensitive(&self.0, "timeout exceeded")
-            || contains_case_insensitive(&self.0, "timed out")
-    }
+    #[error("{0}")]
+    Trap(String),
 }
 
-fn contains_case_insensitive(haystack: &str, needle: &str) -> bool {
-    haystack
-        .to_ascii_lowercase()
-        .contains(&needle.to_ascii_lowercase())
-}
-
-pub fn last_error() -> Option<ZwasmError> {
-    let err_ptr = unsafe { sys::zwasm_last_error_message() };
-    if err_ptr.is_null() {
-        None
+pub(crate) fn non_null<T>(ptr: *mut T, msg: &str) -> Result<*mut T, Error> {
+    if ptr.is_null() {
+        Err(Error::Message(msg.to_string()))
     } else {
-        let c_str = unsafe { std::ffi::CStr::from_ptr(err_ptr) };
-        let str_slice = c_str.to_str().unwrap_or("Invalid UTF-8");
-        Some(ZwasmError(str_slice.to_string()))
+        Ok(ptr)
+    }
+}
+
+pub(crate) unsafe fn trap_to_error(trap: *mut sys::wasm_trap_t) -> Error {
+    let mut message = sys::wasm_message_t {
+        size: 0,
+        data: std::ptr::null_mut(),
+    };
+    sys::wasm_trap_message(trap, &mut message);
+    let len = if message.size > 0 {
+        message.size - 1
+    } else {
+        0
+    };
+    let msg = String::from_utf8_lossy(std::slice::from_raw_parts(message.data as *const u8, len))
+        .to_string();
+    sys::wasm_byte_vec_delete(&mut message);
+    sys::wasm_trap_delete(trap);
+    Error::Trap(msg)
+}
+
+pub(crate) fn trap_into_result(trap: *mut sys::wasm_trap_t) -> Result<(), Error> {
+    if trap.is_null() {
+        Ok(())
+    } else {
+        Err(unsafe { trap_to_error(trap) })
     }
 }
