@@ -1,6 +1,10 @@
 pub mod engine;
 pub mod error;
 pub mod func;
+pub mod global;
 pub mod instance;
+pub mod memory;
 pub mod module;
 pub mod store;
+pub mod table;
+pub mod val;

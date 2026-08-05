@@ -1,0 +1,51 @@
+use zwasm_sys::{self as sys};
+
+use crate::{
+    error::{non_null, Error},
+    store::Store,
+};
+
+pub struct Table {
+    pub(crate) ptr: *mut sys::wasm_table_t,
+}
+
+impl Table {
+    pub fn new(store: &Store, min: u32, max: Option<u32>) -> Result<Self, Error> {
+        let valtype = unsafe { sys::wasm_valtype_new(sys::wasm_valkind_enum_WASM_FUNCREF as u8) };
+        let limits = sys::wasm_limits_t {
+            min,
+            max: max.unwrap_or(sys::wasm_limits_max_default),
+        };
+        let tabletype = non_null(
+            unsafe { sys::wasm_tabletype_new(valtype, &limits) },
+            "failed to create table type",
+        )?;
+        let ptr = non_null(
+            unsafe { sys::wasm_table_new(store.ptr, tabletype, std::ptr::null_mut()) },
+            "failed to create table",
+        )?;
+        unsafe { sys::wasm_tabletype_delete(tabletype) };
+        Ok(Table { ptr })
+    }
+
+    pub fn grow(&self, delta: u32) -> Result<(), Error> {
+        let result = unsafe { sys::wasm_table_grow(self.ptr, delta, std::ptr::null_mut()) };
+        if result {
+            Ok(())
+        } else {
+            Err(Error::Message("failed to grow table".to_string()))
+        }
+    }
+
+    pub fn size(&self) -> u32 {
+        unsafe { sys::wasm_table_size(self.ptr) }
+    }
+}
+
+impl Drop for Table {
+    fn drop(&mut self) {
+        unsafe {
+            sys::wasm_table_delete(self.ptr);
+        }
+    }
+}

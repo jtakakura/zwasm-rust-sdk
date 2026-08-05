@@ -2,6 +2,7 @@ use zwasm_sdk::engine::Engine;
 use zwasm_sdk::instance::Instance;
 use zwasm_sdk::module::Module;
 use zwasm_sdk::store::Store;
+use zwasm_sdk::val::Val;
 
 // (func (export "f") (result i32) (i32.const 42))
 const RETURN42_WASM: &[u8] = &[
@@ -19,17 +20,6 @@ const ADD_WASM: &[u8] = &[
 
 // Minimal valid wasm: magic + version only
 const MINIMAL_WASM: &[u8] = &[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00];
-
-fn i32_val(v: i32) -> zwasm_sys::wasm_val_t {
-    zwasm_sys::wasm_val_t {
-        kind: zwasm_sys::wasm_valkind_enum_WASM_I32 as u8,
-        of: zwasm_sys::wasm_val_t__bindgen_ty_1 { i32_: v },
-    }
-}
-
-unsafe fn get_i32(val: &zwasm_sys::wasm_val_t) -> i32 {
-    val.of.i32_
-}
 
 #[test]
 fn test_engine_new() {
@@ -92,7 +82,7 @@ fn test_invoke_no_args() {
     let results = func.call(&[]).unwrap();
 
     assert_eq!(results.len(), 1);
-    assert_eq!(unsafe { get_i32(&results[0]) }, 42);
+    assert_eq!(results[0], Val::I32(42));
 }
 
 #[test]
@@ -103,11 +93,11 @@ fn test_invoke_with_args() {
     let instance = Instance::new(&store, &module).unwrap();
     let func = instance.get_func(0).unwrap();
 
-    let args = [i32_val(10), i32_val(32)];
+    let args = [Val::I32(10), Val::I32(32)];
     let results = func.call(&args).unwrap();
 
     assert_eq!(results.len(), 1);
-    assert_eq!(unsafe { get_i32(&results[0]) }, 42);
+    assert_eq!(results[0], Val::I32(42));
 }
 
 #[test]
@@ -118,11 +108,11 @@ fn test_invoke_add_zero() {
     let instance = Instance::new(&store, &module).unwrap();
     let func = instance.get_func(0).unwrap();
 
-    let args = [i32_val(0), i32_val(0)];
+    let args = [Val::I32(0), Val::I32(0)];
     let results = func.call(&args).unwrap();
 
     assert_eq!(results.len(), 1);
-    assert_eq!(unsafe { get_i32(&results[0]) }, 0);
+    assert_eq!(results[0], Val::I32(0));
 }
 
 #[test]
@@ -133,4 +123,42 @@ fn test_get_func_out_of_range() {
     let instance = Instance::new(&store, &module).unwrap();
     let func = instance.get_func(99);
     assert!(func.is_err());
+}
+
+#[test]
+fn test_get_func_by_name() {
+    let engine = Engine::new().unwrap();
+    let store = Store::new(&engine).unwrap();
+    let module = Module::new(&store, RETURN42_WASM).unwrap();
+    let instance = Instance::new(&store, &module).unwrap();
+    let func = instance.get_func_by_name(&module, "f").unwrap();
+    let results = func.call(&[]).unwrap();
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0], Val::I32(42));
+}
+
+#[test]
+fn test_get_func_by_name_not_found() {
+    let engine = Engine::new().unwrap();
+    let store = Store::new(&engine).unwrap();
+    let module = Module::new(&store, RETURN42_WASM).unwrap();
+    let instance = Instance::new(&store, &module).unwrap();
+    let func = instance.get_func_by_name(&module, "nonexistent");
+    assert!(func.is_err());
+}
+
+#[test]
+fn test_get_func_by_name_add() {
+    let engine = Engine::new().unwrap();
+    let store = Store::new(&engine).unwrap();
+    let module = Module::new(&store, ADD_WASM).unwrap();
+    let instance = Instance::new(&store, &module).unwrap();
+    let func = instance.get_func_by_name(&module, "add").unwrap();
+
+    let args = [Val::I32(10), Val::I32(32)];
+    let results = func.call(&args).unwrap();
+
+    assert_eq!(results.len(), 1);
+    assert_eq!(results[0], Val::I32(42));
 }

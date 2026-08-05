@@ -33,6 +33,27 @@ impl Instance {
         )?;
         Ok(Func { ptr })
     }
+
+    pub fn get_func_by_name(&self, module: &Module, name: &str) -> Result<Func, Error> {
+        let mut module_exports = sys::wasm_exporttype_vec_t {
+            size: 0,
+            data: std::ptr::null_mut(),
+        };
+        unsafe { sys::wasm_module_exports(module.ptr, &mut module_exports) };
+        let found_index = (0..module_exports.size).position(|i| {
+            let exporttype = unsafe { *module_exports.data.add(i) };
+            let name_ptr = unsafe { sys::wasm_exporttype_name(exporttype) };
+            let name_bytes = unsafe {
+                std::slice::from_raw_parts((*name_ptr).data as *const u8, (*name_ptr).size)
+            };
+            name_bytes == name.as_bytes()
+        });
+        unsafe { sys::wasm_exporttype_vec_delete(&mut module_exports) };
+
+        let index =
+            found_index.ok_or_else(|| Error::Message(format!("export '{}' not found", name)))?;
+        self.get_func(index as u32)
+    }
 }
 
 impl Drop for Instance {
