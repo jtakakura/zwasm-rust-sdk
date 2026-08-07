@@ -8,3 +8,4 @@ pub mod module;
 pub mod store;
 pub mod table;
 pub mod val;
+pub mod wasi;

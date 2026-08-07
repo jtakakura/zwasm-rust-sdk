@@ -15,7 +15,7 @@ impl Engine {
 
 impl Default for Engine {
     fn default() -> Self {
-        Self::new().expect("Failed to create a new Engine")
+        Self::new().expect("failed to create default Engine")
     }
 }
 
