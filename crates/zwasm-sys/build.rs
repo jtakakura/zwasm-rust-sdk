@@ -1,16 +1,53 @@
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn main() {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR not set"));
-    let zig_local_cache_dir = out_dir.join("zig-local-cache");
-    let zig_global_cache_dir = out_dir.join("zig-global-cache");
-    let zig_install_prefix = out_dir.join("zig-install");
     let zwasm_src_dir = env::current_dir()
         .expect("Failed to get current dir")
         .join("zwasm");
+
+    println!("cargo:rerun-if-env-changed=DOCS_RS");
+
+    // docs.rs builds in an offline sandbox that has no Zig toolchain, so the zwasm C
+    // library cannot be built there. rustdoc never links the native library, so we
+    // generate bindings straight from the vendored header and skip the Zig build.
+    let header_path = if env::var_os("DOCS_RS").is_some() {
+        zwasm_src_dir.join("include/zwasm.h")
+    } else {
+        build_zwasm(&out_dir, &zwasm_src_dir)
+    };
+
+    if !header_path.exists() {
+        panic!(
+            "Error: zwasm.h not found at {}.\n\
+            The header file must be present for bindgen to generate Rust bindings.\n\
+            Please ensure the zwasm C build step completed successfully and the header is copied to the expected location.",
+            header_path.display()
+        );
+    }
+
+    let bindings = bindgen::Builder::default()
+        .header(header_path.to_str().unwrap())
+        .allowlist_function("zwasm_.*")
+        .allowlist_type("zwasm_.*")
+        .allowlist_var("zwasm_.*")
+        .generate()
+        .expect("Unable to generate bindings with bindgen. Please check that zwasm.h is valid and accessible.");
+
+    bindings
+        .write_to_file(out_dir.join("bindings.rs"))
+        .expect("Couldn't write bindings.rs! Check write permissions and disk space.");
+}
+
+/// Builds the zwasm C library with Zig, emits the link directives, and returns the
+/// path to the installed `zwasm.h`.
+fn build_zwasm(out_dir: &Path, zwasm_src_dir: &Path) -> PathBuf {
+    let zig_local_cache_dir = out_dir.join("zig-local-cache");
+    let zig_global_cache_dir = out_dir.join("zig-global-cache");
+    let zig_install_prefix = out_dir.join("zig-install");
 
     fs::create_dir_all(&zig_local_cache_dir).expect("Failed to create Zig local cache directory");
     fs::create_dir_all(&zig_global_cache_dir).expect("Failed to create Zig global cache directory");
@@ -23,7 +60,7 @@ fn main() {
 
     // Build zwasm C library using zig
     let status = Command::new("zig")
-        .current_dir(&zwasm_src_dir)
+        .current_dir(zwasm_src_dir)
         .env("ZIG_LOCAL_CACHE_DIR", &zig_local_cache_dir)
         .env("ZIG_GLOBAL_CACHE_DIR", &zig_global_cache_dir)
         .arg("build")
@@ -45,26 +82,5 @@ fn main() {
     println!("cargo:rustc-link-lib=zwasm");
     println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_dir.display());
 
-    // Check if zwasm.h exists before running bindgen
-    let header_path = zig_install_prefix.join("include/zwasm.h");
-    if !header_path.exists() {
-        panic!(
-            "Error: zwasm.h not found at {}.\n\
-            The header file must be present for bindgen to generate Rust bindings.\n\
-            Please ensure the zwasm C build step completed successfully and the header is copied to the expected location.",
-            header_path.display()
-        );
-    }
-
-    let bindings = bindgen::Builder::default()
-        .header(header_path.to_str().unwrap())
-        .allowlist_function("zwasm_.*")
-        .allowlist_type("zwasm_.*")
-        .allowlist_var("zwasm_.*")
-        .generate()
-        .expect("Unable to generate bindings with bindgen. Please check that zwasm.h is valid and accessible.");
-
-    bindings
-        .write_to_file(out_dir.join("bindings.rs"))
-        .expect("Couldn't write bindings.rs! Check write permissions and disk space.");
+    zig_install_prefix.join("include/zwasm.h")
 }
