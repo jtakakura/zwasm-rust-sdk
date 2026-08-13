@@ -40,3 +40,28 @@ jobs:
 
       - name: E2E examples tests
         run: cargo test --test examples_e2e
+
+  # Single required status check for the branch ruleset. Point the ruleset at
+  # `ci-required`, not at the individual `Test (...)` matrix legs, so the matrix
+  # can change without a settings change. `always()` so this job still reports a
+  # result when `test` fails or is cancelled: a required check that never
+  # reports would block every pull request.
+  ci-required:
+    name: ci-required
+    needs: [test]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verdict
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `needs.test.result` is success only when every matrix leg succeeded.
+          if [ "$TEST_RESULT" != "success" ]; then
+            echo "::error::test did not pass (result=$TEST_RESULT)"
+            exit 1
+          fi
+          echo "test passed on all matrix legs"
