@@ -1,6 +1,6 @@
 # zwasm Rust SDK
 
-zwasm-sdk provides safe, idiomatic Rust bindings to the [zwasm](https://github.com/clojurewasm/zwasm) WebAssembly runtime.
+zwasm-sdk provides safe, idiomatic Rust bindings to the [zwasm](https://github.com/zwasm/zwasm) WebAssembly runtime.
 
 ## Supported Rust Version
 
@@ -75,7 +75,7 @@ zwasm-sdk provides a safe, ergonomic API for most use cases. All FFI unsafety is
 ## API Reference
 
 - [API documentation on docs.rs](https://docs.rs/zwasm-sdk)
-- [zwasm C API documentation](https://clojurewasm.github.io/zwasm/en/c-api.html)
+- [zwasm C API documentation](https://github.com/zwasm/zwasm/blob/v1.11.0/book/en/src/c-api.md)
 
 ## License
 

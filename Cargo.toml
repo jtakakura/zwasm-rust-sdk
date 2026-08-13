@@ -6,7 +6,7 @@ edition = "2021"
 license = "MIT"
 name = "zwasm-sdk"
 readme = "README.md"
-repository = "https://github.com/jtakakura/zwasm-rust-sdk"
+repository = "https://github.com/zwasm/zwasm-rust-sdk"
 version = "0.1.0"
 
 [dependencies]

@@ -12,7 +12,7 @@ This project requires **Zig 0.16.0** to build the underlying `zwasm` library.
 
 1. **Clone the repository with submodules:**
    ```bash
-   git clone --recursive [https://github.com/jtakakura/zwasm-rust-sdk.git](https://github.com/jtakakura/zwasm-rust-sdk.git)
+   git clone --recursive https://github.com/zwasm/zwasm-rust-sdk.git
    ```
    If you've already cloned without submodules, run:
    ```

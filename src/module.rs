@@ -12,7 +12,7 @@ use std::sync::{Arc, Weak};
 /// threads, GC, and exception handling. Module instances are not thread-safe and must
 /// not be shared between threads.
 ///
-/// See the [zwasm project](https://github.com/clojurewasm/zwasm) for details on the underlying engine.
+/// See the [zwasm project](https://github.com/zwasm/zwasm) for details on the underlying engine.
 use zwasm_sys as sys;
 
 struct ModuleInner {
@@ -97,7 +97,7 @@ impl Module {
 
     /// Creates a module with an explicit runtime configuration (memory, fuel, limits, etc).
     ///
-    /// Allows fine-grained control over the execution environment. See [`Config`] for options.
+    /// Allows fine-grained control over the execution environment. See [`Config`](crate::Config) for options.
     pub fn new_configured(
         wasm_bytes: &[u8],
         config: &config::Config,
@@ -111,7 +111,7 @@ impl Module {
 
     /// Creates a WASI-enabled module with an explicit WASI configuration.
     ///
-    /// Use this to provide argv, env, preopens, and other WASI settings. See [`WasiConfig`].
+    /// Use this to provide argv, env, preopens, and other WASI settings. See [`WasiConfig`](crate::WasiConfig).
     pub fn new_wasi_configured(
         wasm_bytes: &[u8],
         wasi_config: &wasi::WasiConfig,
@@ -129,7 +129,7 @@ impl Module {
 
     /// Creates a WASI-enabled module with both WASI and runtime configuration.
     ///
-    /// Combines all options from [`Config`] and [`WasiConfig`].
+    /// Combines all options from [`Config`](crate::Config) and [`WasiConfig`](crate::WasiConfig).
     pub fn new_wasi_configured2(
         wasm_bytes: &[u8],
         wasi_config: &wasi::WasiConfig,
@@ -147,7 +147,7 @@ impl Module {
         Self::from_raw(ptr)
     }
 
-    /// Creates a module with host functions registered via [`Imports`].
+    /// Creates a module with host functions registered via [`Imports`](crate::Imports).
     ///
     /// Use this to expose custom native functions to Wasm code.
     pub fn new_with_imports(

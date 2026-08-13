@@ -9,7 +9,7 @@ use zwasm_sys as sys;
 /// Runtime configuration for zwasm modules.
 ///
 /// Allows fine-grained control over memory allocation, fuel, timeouts, and resource limits.
-/// Used to customize the execution environment for a [`Module`].
+/// Used to customize the execution environment for a [`Module`](crate::Module).
 pub struct Config {
     pub(crate) ptr: *mut sys::zwasm_config_t,
     allocator: Option<Box<ConfigAllocator>>,
@@ -105,7 +105,7 @@ impl Config {
 
     /// Enables or disables cancellation support for the module.
     ///
-    /// When enabled, execution can be cancelled via [`Module::cancel`].
+    /// When enabled, execution can be cancelled via [`Module::cancel`](crate::Module::cancel).
     pub fn set_cancelable(&mut self, cancelable: bool) {
         unsafe {
             sys::zwasm_config_set_cancellable(self.ptr, cancelable);
