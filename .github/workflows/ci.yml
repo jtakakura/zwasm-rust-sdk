@@ -1,4 +1,4 @@
-name: CI
+name: ci
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    name: Test (${{ matrix.os }})
+    name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -42,7 +42,7 @@ jobs:
         run: cargo test --test examples_e2e
 
   # Single required status check for the branch ruleset. Point the ruleset at
-  # `ci-required`, not at the individual `Test (...)` matrix legs, so the matrix
+  # `ci-required`, not at the individual `test (...)` matrix legs, so the matrix
   # can change without a settings change. `always()` so this job still reports a
   # result when `test` fails or is cancelled: a required check that never
   # reports would block every pull request.
