@@ -75,7 +75,7 @@ zwasm-sdk provides a safe, ergonomic API for most use cases. All FFI unsafety is
 ## API Reference
 
 - [API documentation on docs.rs](https://docs.rs/zwasm-sdk)
-- [zwasm C API documentation](https://github.com/zwasm/zwasm/blob/v1.11.0/book/en/src/c-api.md)
+- [zwasm C API documentation](https://github.com/zwasm/zwasm/blob/v1.11.1/book/en/src/c-api.md)
 
 ## License
 

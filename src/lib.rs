@@ -48,7 +48,7 @@
 //! - `examples/memory_io.rs`
 //! - `examples/wasi_config.rs`
 //!
-//! See the upstream [README](https://github.com/zwasm/zwasm) and [ARCHITECTURE.md](https://github.com/zwasm/zwasm/blob/v1.11.0/ARCHITECTURE.md) for details.
+//! See the upstream [README](https://github.com/zwasm/zwasm) and [ARCHITECTURE.md](https://github.com/zwasm/zwasm/blob/v1.11.1/ARCHITECTURE.md) for details.
 mod config;
 mod error;
 mod ffi;
