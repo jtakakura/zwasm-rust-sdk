@@ -1,6 +1,6 @@
 //! # zwasm-sdk
 //!
-//! Rust bindings for [zwasm](https://github.com/clojurewasm/zwasm): a small, fast, and spec-complete WebAssembly runtime written in Zig.
+//! Rust bindings for [zwasm](https://github.com/zwasm/zwasm): a small, fast, and spec-complete WebAssembly runtime written in Zig.
 //!
 //! ## Features
 //! - **Tiny and fast**: ~1.2MB binary, JIT for ARM64/x86_64, full SIMD, threads, GC, exception handling, and more.
@@ -13,7 +13,6 @@
 //! ## Supported platforms
 //! - Linux (x86_64, aarch64)
 //! - macOS (aarch64)
-//! - Windows (x86_64)
 //!
 //! ## Example
 //! ```no_run
@@ -49,7 +48,7 @@
 //! - `examples/memory_io.rs`
 //! - `examples/wasi_config.rs`
 //!
-//! See the upstream [README](https://github.com/clojurewasm/zwasm) and [ARCHITECTURE.md](https://github.com/clojurewasm/zwasm/blob/main/ARCHITECTURE.md) for details.
+//! See the upstream [README](https://github.com/zwasm/zwasm) and [ARCHITECTURE.md](https://github.com/zwasm/zwasm/blob/v1.11.0/ARCHITECTURE.md) for details.
 mod config;
 mod error;
 mod ffi;

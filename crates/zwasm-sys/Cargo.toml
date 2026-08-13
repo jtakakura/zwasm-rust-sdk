@@ -8,7 +8,7 @@ license = "MIT"
 links = "zwasm"
 name = "zwasm-sys"
 readme = "README.md"
-repository = "https://github.com/jtakakura/zwasm-rust-sdk"
+repository = "https://github.com/zwasm/zwasm-rust-sdk"
 version = "0.1.0"
 include = [
     "Cargo.toml",

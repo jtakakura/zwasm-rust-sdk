@@ -59,12 +59,12 @@ unsafe {
 
 ## API Reference
 
-- [zwasm C API Documentation](https://clojurewasm.github.io/zwasm/en/c-api.html)
+- [zwasm C API Documentation](https://github.com/zwasm/zwasm/blob/v1.11.0/book/en/src/c-api.md)
 
 ## License
 
 - **Rust code in this repository (including zwasm-sys):** MIT License
-- **zwasm C API (submodule):** See [zwasm LICENSE](https://github.com/clojurewasm/zwasm/blob/main/LICENSE) for details. You must comply with the license of the zwasm C library in addition to the MIT License for Rust code.
+- **zwasm C API (submodule):** See [zwasm LICENSE](https://github.com/zwasm/zwasm/blob/v1.11.0/LICENSE) for details. You must comply with the license of the zwasm C library in addition to the MIT License for Rust code.
 
 ## Contributing & Issue Reporting
 
