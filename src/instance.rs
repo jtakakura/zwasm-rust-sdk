@@ -91,6 +91,10 @@ impl Instance {
         };
         unsafe { sys::wasm_instance_exports(self.ptr, &mut instance_exports) };
         let ext = unsafe { *instance_exports.data.add(index) };
+        // wasm_extern_as_func borrows out of the vector, so the handle has to be
+        // copied before the vector goes. A non-function export makes it null, and
+        // wasm_func_copy passes null through (zwasm cloneEntity,
+        // src/api/ref_base.zig:249), so the check below covers both cases.
         let ptr = unsafe { sys::wasm_func_copy(sys::wasm_extern_as_func(ext)) };
         unsafe { sys::wasm_extern_vec_delete(&mut instance_exports) };
 
