@@ -12,9 +12,6 @@ use crate::{
 /// a Rust callback with [`Func::new_host`].
 pub struct Func {
     pub(crate) ptr: *mut sys::wasm_func_t,
-    // Set when `ptr` is borrowed out of an exports vector, which owns it. Dropping
-    // the vector is what releases the function, so the two travel together.
-    pub(crate) owner: Option<sys::wasm_extern_vec_t>,
 }
 
 impl Func {
@@ -36,10 +33,7 @@ impl Func {
     ) -> Result<Self, Error> {
         let func = unsafe { sys::wasm_func_new(store.ptr, functype, callback) };
         let func = non_null(func, "failed to create host function")?;
-        Ok(Func {
-            ptr: func,
-            owner: None,
-        })
+        Ok(Func { ptr: func })
     }
 
     /// Calls the function.
@@ -69,11 +63,6 @@ impl Func {
 
 impl Drop for Func {
     fn drop(&mut self) {
-        match self.owner.take() {
-            Some(mut exports) => unsafe { sys::wasm_extern_vec_delete(&mut exports) },
-            None => unsafe {
-                sys::wasm_func_delete(self.ptr);
-            },
-        }
+        unsafe { sys::wasm_func_delete(self.ptr) };
     }
 }

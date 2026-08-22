@@ -166,6 +166,34 @@ fn test_get_func_by_name_add() {
 }
 
 // (module
+//   (func (export "a") (result i32) (i32.const 1))
+//   (func (export "b") (result i32) (i32.const 2)))
+const TWO_EXPORTS_WASM: &[u8] = &[
+    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7f, 0x03,
+    0x03, 0x02, 0x00, 0x00, 0x07, 0x09, 0x02, 0x01, 0x61, 0x00, 0x00, 0x01, 0x62, 0x00, 0x01, 0x0a,
+    0x0b, 0x02, 0x04, 0x00, 0x41, 0x01, 0x0b, 0x04, 0x00, 0x41, 0x02, 0x0b,
+];
+
+// Each Func from get_func_by_name owns its handle, so two of them from one
+// instance are independent. They used to borrow out of an exports vector that
+// the Func kept alive instead, which is the arrangement wasm_func_copy replaced.
+#[test]
+fn test_two_funcs_by_name_stay_valid_together() {
+    let engine = Engine::new().unwrap();
+    let store = Store::new(&engine).unwrap();
+    let module = Module::new(&store, TWO_EXPORTS_WASM).unwrap();
+    let instance = Instance::new(&store, &module, &[]).unwrap();
+
+    let a = instance.get_func_by_name(&module, "a").unwrap();
+    let b = instance.get_func_by_name(&module, "b").unwrap();
+
+    // Interleaved, so each handle is used after the other one was created.
+    assert_eq!(a.call(&[]).unwrap(), vec![Val::I32(1)]);
+    assert_eq!(b.call(&[]).unwrap(), vec![Val::I32(2)]);
+    assert_eq!(a.call(&[]).unwrap(), vec![Val::I32(1)]);
+}
+
+// (module
 //   (import "env" "h" (func (param i32) (result i32)))
 //   (func (export "f") (param i32) (result i32) (local.get 0) (call 0)))
 const CALLBACK_WASM: &[u8] = &[
