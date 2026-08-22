@@ -39,7 +39,7 @@ impl Table {
     /// Grows the table by `delta` null slots.
     ///
     /// Fails when the result would exceed the maximum the table was created with.
-    pub fn grow(&self, delta: u32) -> Result<(), Error> {
+    pub fn grow(&mut self, delta: u32) -> Result<(), Error> {
         let result = unsafe { sys::wasm_table_grow(self.ptr, delta, std::ptr::null_mut()) };
         if result {
             Ok(())

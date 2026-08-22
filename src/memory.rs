@@ -33,8 +33,9 @@ impl Memory {
 
     /// Borrows the memory's bytes.
     ///
-    /// Growing the memory can move the backing buffer, so the slice must not be
-    /// held across a [`Memory::grow`] or across guest code that grows it.
+    /// Growing the memory can move the backing buffer. [`Memory::grow`] takes
+    /// `&mut self`, so the borrow checker rejects holding this slice across one.
+    /// Guest code that grows the memory is outside that check.
     pub fn data(&self) -> &[u8] {
         let data_ptr = unsafe { sys::wasm_memory_data(self.ptr) };
         let data_size = unsafe { sys::wasm_memory_data_size(self.ptr) };
@@ -53,8 +54,9 @@ impl Memory {
     /// Grows the memory by `delta` pages.
     ///
     /// Fails when the result would exceed the maximum the memory was created with.
-    /// Any slice from [`Memory::data`] is invalid afterwards.
-    pub fn grow(&self, delta: u32) -> Result<(), Error> {
+    /// Takes `&mut self` because growing can move the backing buffer, invalidating
+    /// any slice from [`Memory::data`].
+    pub fn grow(&mut self, delta: u32) -> Result<(), Error> {
         let result = unsafe { sys::wasm_memory_grow(self.ptr, delta) };
         if result {
             Ok(())

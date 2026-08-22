@@ -51,7 +51,7 @@ impl Global {
     /// On an immutable global this is silently ignored, matching the C API, which
     /// rejects the out of band write without reporting it. There is no error to
     /// check, so guard on the mutability you created the global with.
-    pub fn set(&self, value: Val) {
+    pub fn set(&mut self, value: Val) {
         let val: sys::wasm_val_t = value.into();
         unsafe { sys::wasm_global_set(self.ptr, &val) }
     }
