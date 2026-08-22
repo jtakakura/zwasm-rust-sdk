@@ -208,7 +208,7 @@ fn test_host_function() {
     };
     let functype = unsafe { zwasm_sys::wasm_functype_new(&mut params, &mut results) };
 
-    let host_fn = Func::new_host(&store, functype, Some(add_one)).unwrap();
+    let host_fn = unsafe { Func::new_host(&store, functype, Some(add_one)) }.unwrap();
     unsafe { zwasm_sys::wasm_functype_delete(functype) };
 
     let module = Module::new(&store, CALLBACK_WASM).unwrap();

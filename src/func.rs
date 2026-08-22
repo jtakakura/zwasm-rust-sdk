@@ -12,7 +12,18 @@ pub struct Func {
 }
 
 impl Func {
-    pub fn new_host(
+    /// Creates a host function the guest can call.
+    ///
+    /// # Safety
+    ///
+    /// `functype` must point to a live `wasm_functype_t`. Ownership stays with the
+    /// caller, who must release it with `wasm_functype_delete` once this call
+    /// returns; the arity is copied here.
+    ///
+    /// `callback` must accept the argument and result arities that `functype`
+    /// declares, and must write every result before returning null. Returning a
+    /// non-null trap transfers ownership of that trap to the runtime.
+    pub unsafe fn new_host(
         store: &Store,
         functype: *const sys::wasm_functype_t,
         callback: sys::wasm_func_callback_t,
