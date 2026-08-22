@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - Unreleased
+### Changed
+- **Breaking.** Rewrote the SDK against zwasm 2.x. zwasm 2.0 replaced its custom C API with the standard [wasm-c-api](https://github.com/WebAssembly/wasm-c-api), so nothing from 0.1 carries over. `Module::new` no longer takes bytes alone, `Module::invoke` is gone, and `Config`, `Imports` and `CancelHandle` have no replacement yet
+- Updated the bundled zwasm C API to 2.5.0
+- The C library is now linked statically. Consumers no longer need `libzwasm.so` on the machine that runs the binary
+- Bindings are now generated from `wasm.h`, `zwasm.h` and `wasi.h` rather than a single header
+
+### Added
+- `Engine`, `Store`, `Module`, `Instance` and `Func`, mirroring the wasm-c-api object model
+- `Val`, a typed enum over `wasm_val_t`, replacing the `u64` arrays of 0.1
+- `Memory`, `Global` and `Table`
+- `Instance::get_func_by_name` for looking up an export by name
+- `Func::new_host` and an `imports` argument on `Instance::new`, so a guest can call into Rust
+- `WasiConfig` covering the whole `wasi.h` surface (args, envs, preopens, stdio and env inheritance), installed with `Store::set_wasi`
+
+### Fixed
+- Missing `-lm`, which zwasm requires on glibc older than 2.34
+- Missing `-Wl,-z,noexecstack` on Linux, needed because Zig emits no `.note.GNU-stack` section
+- Removed an `-Wl,-rpath` pointing into `OUT_DIR`, which baked a build-host path into the binary
+- Corrected the `CONTRIBUTING.md` link in the zwasm-sys README
+
+### Removed
+- The `examples/` directory and the `nix` dev-dependency, both of which only built against the 0.1 API
+
 ## [0.1.1] - 2026-08-13
 ### Changed
 - Moved the repository to the zwasm organization and updated the repository and upstream URLs
