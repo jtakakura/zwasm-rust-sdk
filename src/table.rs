@@ -5,11 +5,19 @@ use crate::{
     store::Store,
 };
 
+/// A table of references, wrapping `wasm_table_t`.
+///
+/// Element access (`wasm_table_get` and `wasm_table_set`) is not wrapped, because
+/// it works in terms of `wasm_ref_t`, which has no safe representation here yet.
 pub struct Table {
     pub(crate) ptr: *mut sys::wasm_table_t,
 }
 
 impl Table {
+    /// Creates a `funcref` table of `min` slots, growable to `max`.
+    ///
+    /// `None` for `max` means no maximum. Every slot starts null. The element type
+    /// is always `funcref`.
     pub fn new(store: &Store, min: u32, max: Option<u32>) -> Result<Self, Error> {
         let valtype = unsafe { sys::wasm_valtype_new(sys::wasm_valkind_enum_WASM_FUNCREF as u8) };
         let limits = sys::wasm_limits_t {
@@ -28,6 +36,9 @@ impl Table {
         Ok(Table { ptr })
     }
 
+    /// Grows the table by `delta` null slots.
+    ///
+    /// Fails when the result would exceed the maximum the table was created with.
     pub fn grow(&self, delta: u32) -> Result<(), Error> {
         let result = unsafe { sys::wasm_table_grow(self.ptr, delta, std::ptr::null_mut()) };
         if result {
@@ -37,6 +48,7 @@ impl Table {
         }
     }
 
+    /// Returns the current number of slots.
     pub fn size(&self) -> u32 {
         unsafe { sys::wasm_table_size(self.ptr) }
     }

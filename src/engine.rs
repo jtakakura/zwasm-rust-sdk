@@ -2,11 +2,18 @@ use zwasm_sys as sys;
 
 use crate::error::{non_null, Error};
 
+/// A compilation and runtime environment, wrapping `wasm_engine_t`.
+///
+/// One engine can back any number of [`Store`](crate::store::Store)s. It holds no
+/// per-instance state, so it is `Send + Sync` and can be shared across threads.
 pub struct Engine {
     pub(crate) ptr: *mut sys::wasm_engine_t,
 }
 
 impl Engine {
+    /// Creates an engine.
+    ///
+    /// Fails only when the C side cannot allocate.
     pub fn new() -> Result<Self, Error> {
         let ptr = non_null(unsafe { sys::wasm_engine_new() }, "failed to create engine")?;
         Ok(Engine { ptr })
@@ -14,6 +21,9 @@ impl Engine {
 }
 
 impl Default for Engine {
+    /// Creates an engine, panicking on failure.
+    ///
+    /// Use [`Engine::new`] to handle the allocation failure instead.
     fn default() -> Self {
         Self::new().expect("failed to create default Engine")
     }

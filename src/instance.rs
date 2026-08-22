@@ -7,11 +7,23 @@ use crate::{
     store::Store,
 };
 
+/// An instantiated module, wrapping `wasm_instance_t`.
 pub struct Instance {
     pub(crate) ptr: *mut sys::wasm_instance_t,
 }
 
 impl Instance {
+    /// Instantiates `module`, running its start function if it has one.
+    ///
+    /// `imports` has to line up with the module's import section, in declaration
+    /// order. Only function imports are supported; a module importing a memory,
+    /// global or table cannot be instantiated through this API yet.
+    ///
+    /// Imports of `wasi_snapshot_preview1.*` are resolved by the host installed
+    /// with [`Store::set_wasi`](crate::store::Store::set_wasi), not through this
+    /// argument.
+    ///
+    /// A trap in the start function is returned as [`Error::Trap`].
     pub fn new(store: &Store, module: &Module, imports: &[&Func]) -> Result<Self, Error> {
         let import_externs: Vec<*mut sys::wasm_extern_t> = imports
             .iter()
@@ -31,6 +43,13 @@ impl Instance {
         Ok(Instance { ptr })
     }
 
+    /// Looks a function up by its index among the module's defined functions.
+    ///
+    /// Prefer [`Instance::get_func_by_name`]. This wraps
+    /// `zwasm_instance_get_func`, which indexes the full function index space but
+    /// bounds checks against the defined functions alone, so it resolves the wrong
+    /// function on a module that imports any. It is only reliable when the module
+    /// has no function imports.
     pub fn get_func(&self, index: u32) -> Result<Func, Error> {
         let ptr = non_null(
             unsafe { sys::zwasm_instance_get_func(self.ptr, index) },
@@ -39,6 +58,14 @@ impl Instance {
         Ok(Func { ptr, owner: None })
     }
 
+    /// Looks an exported function up by name.
+    ///
+    /// `module` is needed because `wasm_instance_exports` returns values without
+    /// names; the names come from the module's export section, matched by position.
+    /// It has to be the module this instance was created from.
+    ///
+    /// Returns an error when nothing is exported under `name`, or when the export
+    /// is not a function.
     pub fn get_func_by_name(&self, module: &Module, name: &str) -> Result<Func, Error> {
         let mut module_exports = sys::wasm_exporttype_vec_t {
             size: 0,

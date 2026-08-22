@@ -1,10 +1,23 @@
 use zwasm_sys as sys;
 
+/// A WebAssembly value, wrapping the tagged union `wasm_val_t`.
+///
+/// Only the four numeric types are modelled. Reference values (`funcref`,
+/// `anyref`) round-trip through the C API but have no variant here, and `v128` is
+/// absent from `wasm_val_t` itself by design of the wasm-c-api.
+///
+/// Converting a reference-kind `wasm_val_t` into a `Val` panics, so a function
+/// returning one cannot be called through [`Func::call`](crate::func::Func::call)
+/// yet.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Val {
+    /// A 32 bit integer.
     I32(i32),
+    /// A 64 bit integer.
     I64(i64),
+    /// A 32 bit float.
     F32(f32),
+    /// A 64 bit float.
     F64(f64),
 }
 

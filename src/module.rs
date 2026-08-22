@@ -5,11 +5,20 @@ use crate::{
     store::Store,
 };
 
+/// A compiled and validated module, wrapping `wasm_module_t`.
+///
+/// A module holds no runtime state, so one module can back several
+/// [`Instance`](crate::instance::Instance)s.
 pub struct Module {
     pub(crate) ptr: *mut sys::wasm_module_t,
 }
 
 impl Module {
+    /// Decodes and validates `wasm_bytes`.
+    ///
+    /// The bytes are copied, so they do not have to outlive the module. Returns an
+    /// error when the input is not a valid module; the C API reports no reason, so
+    /// the message is generic.
     pub fn new(store: &Store, wasm_bytes: &[u8]) -> Result<Self, Error> {
         let binary = sys::wasm_byte_vec_t {
             size: wasm_bytes.len(),

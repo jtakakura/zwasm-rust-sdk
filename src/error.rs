@@ -1,11 +1,17 @@
 use thiserror::Error;
 use zwasm_sys as sys;
 
+/// Anything that can go wrong in this crate.
 #[derive(Error, Debug)]
 pub enum Error {
+    /// An operation failed without producing a trap.
+    ///
+    /// Most of the C API reports failure as a null pointer or `false` and carries
+    /// no reason, so these messages are written here rather than taken from zwasm.
     #[error("{0}")]
     Message(String),
 
+    /// Guest execution trapped. Carries the message from `wasm_trap_message`.
     #[error("{0}")]
     Trap(String),
 }

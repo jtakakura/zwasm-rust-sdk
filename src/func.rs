@@ -6,8 +6,14 @@ use crate::{
     val::Val,
 };
 
+/// A callable function, wrapping `wasm_func_t`.
+///
+/// Obtained from an [`Instance`](crate::instance::Instance) export, or created from
+/// a Rust callback with [`Func::new_host`].
 pub struct Func {
     pub(crate) ptr: *mut sys::wasm_func_t,
+    // Set when `ptr` is borrowed out of an exports vector, which owns it. Dropping
+    // the vector is what releases the function, so the two travel together.
     pub(crate) owner: Option<sys::wasm_extern_vec_t>,
 }
 
@@ -36,6 +42,13 @@ impl Func {
         })
     }
 
+    /// Calls the function.
+    ///
+    /// `args` has to match the function's declared parameters in count and type;
+    /// a mismatch traps rather than failing at compile time. The result vector is
+    /// sized from the function's own result arity.
+    ///
+    /// A guest trap is returned as [`Error::Trap`] carrying the trap message.
     pub fn call(&self, args: &[Val]) -> Result<Vec<Val>, Error> {
         let args_vals: Vec<sys::wasm_val_t> = args.iter().map(|a| a.clone().into()).collect();
         let args_vec = sys::wasm_val_vec_t {
