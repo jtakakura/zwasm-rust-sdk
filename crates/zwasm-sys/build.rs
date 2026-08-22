@@ -95,8 +95,15 @@ fn build_zwasm(out_dir: &Path, zwasm_src_dir: &Path) -> PathBuf {
 
     let lib_dir = zig_install_prefix.join("lib");
     println!("cargo:rustc-link-search=native={}", lib_dir.display());
-    println!("cargo:rustc-link-lib=zwasm");
-    println!("cargo:rustc-link-arg=-Wl,-rpath,{}", lib_dir.display());
+    println!("cargo:rustc-link-lib=static=zwasm");
+    // zwasm references libm (trunc/truncf/...), which is a separate library on
+    // glibc older than 2.34.
+    println!("cargo:rustc-link-lib=m");
+    // Zig-emitted objects carry no `.note.GNU-stack` section, so GNU ld assumes an
+    // executable stack and warns (zwasm D-312).
+    if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("linux") {
+        println!("cargo:rustc-link-arg=-Wl,-z,noexecstack");
+    }
 
     zig_install_prefix.join("include")
 }
