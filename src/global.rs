@@ -26,16 +26,20 @@ impl Global {
         } else {
             sys::wasm_mutability_enum_WASM_CONST
         };
-        let globaltype = non_null(
-            unsafe { sys::wasm_globaltype_new(valtype, mutability as u8) },
-            "failed to create global type",
-        )?;
+
+        // wasm_globaltype_new takes ownership of valtype, so valtype is only ours
+        // to release while this call has not succeeded.
+        let globaltype = unsafe { sys::wasm_globaltype_new(valtype, mutability as u8) };
+        if globaltype.is_null() {
+            unsafe { sys::wasm_valtype_delete(valtype) };
+            return Err(Error::Message("failed to create global type".to_string()));
+        }
+
         let initial_val: sys::wasm_val_t = initial.into();
-        let ptr = non_null(
-            unsafe { sys::wasm_global_new(store.ptr, globaltype, &initial_val) },
-            "failed to create global",
-        )?;
+        let ptr = unsafe { sys::wasm_global_new(store.ptr, globaltype, &initial_val) };
         unsafe { sys::wasm_globaltype_delete(globaltype) };
+
+        let ptr = non_null(ptr, "failed to create global")?;
         Ok(Global { ptr })
     }
 

@@ -23,11 +23,10 @@ impl Memory {
             unsafe { sys::wasm_memorytype_new(&limits) },
             "failed to create memory type",
         )?;
-        let ptr = non_null(
-            unsafe { sys::wasm_memory_new(store.ptr, memorytype) },
-            "failed to create memory",
-        )?;
+        let ptr = unsafe { sys::wasm_memory_new(store.ptr, memorytype) };
         unsafe { sys::wasm_memorytype_delete(memorytype) };
+
+        let ptr = non_null(ptr, "failed to create memory")?;
         Ok(Memory { ptr })
     }
 

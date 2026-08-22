@@ -19,20 +19,27 @@ impl Table {
     /// `None` for `max` means no maximum. Every slot starts null. The element type
     /// is always `funcref`.
     pub fn new(store: &Store, min: u32, max: Option<u32>) -> Result<Self, Error> {
-        let valtype = unsafe { sys::wasm_valtype_new(sys::wasm_valkind_enum_WASM_FUNCREF as u8) };
+        let valtype = non_null(
+            unsafe { sys::wasm_valtype_new(sys::wasm_valkind_enum_WASM_FUNCREF as u8) },
+            "failed to create value type",
+        )?;
         let limits = sys::wasm_limits_t {
             min,
             max: max.unwrap_or(sys::wasm_limits_max_default),
         };
-        let tabletype = non_null(
-            unsafe { sys::wasm_tabletype_new(valtype, &limits) },
-            "failed to create table type",
-        )?;
-        let ptr = non_null(
-            unsafe { sys::wasm_table_new(store.ptr, tabletype, std::ptr::null_mut()) },
-            "failed to create table",
-        )?;
+
+        // wasm_tabletype_new takes ownership of valtype, so valtype is only ours to
+        // release while this call has not succeeded.
+        let tabletype = unsafe { sys::wasm_tabletype_new(valtype, &limits) };
+        if tabletype.is_null() {
+            unsafe { sys::wasm_valtype_delete(valtype) };
+            return Err(Error::Message("failed to create table type".to_string()));
+        }
+
+        let ptr = unsafe { sys::wasm_table_new(store.ptr, tabletype, std::ptr::null_mut()) };
         unsafe { sys::wasm_tabletype_delete(tabletype) };
+
+        let ptr = non_null(ptr, "failed to create table")?;
         Ok(Table { ptr })
     }
 
