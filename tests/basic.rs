@@ -1,4 +1,5 @@
 use zwasm_sdk::engine::Engine;
+use zwasm_sdk::error::Error;
 use zwasm_sdk::func::Func;
 use zwasm_sdk::instance::Instance;
 use zwasm_sdk::module::Module;
@@ -218,4 +219,43 @@ fn test_host_function() {
     let call_results = f.call(&[Val::I32(41)]).unwrap();
     assert_eq!(call_results.len(), 1);
     assert_eq!(call_results[0], Val::I32(42));
+}
+
+// (module (func (export "f") unreachable))
+const UNREACHABLE_WASM: &[u8] = &[
+    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x04, 0x01, 0x60, 0x00, 0x00, 0x03, 0x02,
+    0x01, 0x00, 0x07, 0x05, 0x01, 0x01, 0x66, 0x00, 0x00, 0x0a, 0x05, 0x01, 0x03, 0x00, 0x00, 0x0b,
+];
+
+// (module (func (export "f") (result i32) (i32.div_s (i32.const 1) (i32.const 0))))
+const DIV_BY_ZERO_WASM: &[u8] = &[
+    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x05, 0x01, 0x60, 0x00, 0x01, 0x7f, 0x03,
+    0x02, 0x01, 0x00, 0x07, 0x05, 0x01, 0x01, 0x66, 0x00, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00, 0x41,
+    0x01, 0x41, 0x00, 0x6d, 0x0b,
+];
+
+fn trap_message(wasm: &[u8]) -> String {
+    let engine = Engine::new().unwrap();
+    let store = Store::new(&engine).unwrap();
+    let module = Module::new(&store, wasm).unwrap();
+    let instance = Instance::new(&store, &module, &[]).unwrap();
+    let func = instance.get_func_by_name(&module, "f").unwrap();
+
+    match func.call(&[]).unwrap_err() {
+        Error::Trap(msg) => msg,
+        other => panic!("expected a trap, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_trap_on_unreachable() {
+    assert_eq!(trap_message(UNREACHABLE_WASM), "unreachable");
+}
+
+// The trap message is copied out of a `wasm_message_t` whose `size` is the raw
+// byte count. Treating it as null terminated and reading `size - 1` dropped the
+// last character of every trap, which showed up as "integer divide by zer".
+#[test]
+fn test_trap_message_is_not_truncated() {
+    assert_eq!(trap_message(DIV_BY_ZERO_WASM), "integer divide by zero");
 }

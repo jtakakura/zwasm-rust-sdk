@@ -30,13 +30,15 @@ pub(crate) unsafe fn trap_to_error(trap: *mut sys::wasm_trap_t) -> Error {
         data: std::ptr::null_mut(),
     };
     sys::wasm_trap_message(trap, &mut message);
-    let len = if message.size > 0 {
-        message.size - 1
+    let msg = if message.data.is_null() {
+        "trap with no message".to_string()
     } else {
-        0
+        String::from_utf8_lossy(std::slice::from_raw_parts(
+            message.data as *const u8,
+            message.size,
+        ))
+        .to_string()
     };
-    let msg = String::from_utf8_lossy(std::slice::from_raw_parts(message.data as *const u8, len))
-        .to_string();
     sys::wasm_byte_vec_delete(&mut message);
     sys::wasm_trap_delete(trap);
     Error::Trap(msg)
