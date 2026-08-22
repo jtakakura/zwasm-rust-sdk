@@ -7,14 +7,11 @@ license = "MIT"
 name = "zwasm-sdk"
 readme = "README.md"
 repository = "https://github.com/zwasm/zwasm-rust-sdk"
-version = "0.1.1"
+version = "0.2.0"
 
 [dependencies]
-zwasm-sys = { path = "crates/zwasm-sys", version = "0.1.1" }
+zwasm-sys = { path = "crates/zwasm-sys", version = "0.2.0" }
 thiserror = "2.0.18"
-
-[dev-dependencies]
-nix = { version = "0.31.2", features = ["fs"] }
 
 [workspace]
 members = ["crates/zwasm-sys"]

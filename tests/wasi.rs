@@ -1,0 +1,139 @@
+use zwasm_sdk::engine::Engine;
+use zwasm_sdk::instance::Instance;
+use zwasm_sdk::module::Module;
+use zwasm_sdk::store::Store;
+use zwasm_sdk::wasi::WasiConfig;
+
+// (module
+//   (import "wasi_snapshot_preview1" "fd_write"
+//     (func (param i32 i32 i32 i32) (result i32))))
+const WASI_IMPORT_WASM: &[u8] = &[
+    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, // magic + version
+    // type section: (i32 i32 i32 i32) -> (i32)
+    0x01, 0x09, 0x01, 0x60, 0x04, 0x7f, 0x7f, 0x7f, 0x7f, 0x01, 0x7f,
+    // import section: "wasi_snapshot_preview1" "fd_write" func 0
+    0x02, 0x23, 0x01, //
+    0x16, 0x77, 0x61, 0x73, 0x69, 0x5f, 0x73, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x5f, 0x70,
+    0x72, 0x65, 0x76, 0x69, 0x65, 0x77, 0x31, //
+    0x08, 0x66, 0x64, 0x5f, 0x77, 0x72, 0x69, 0x74, 0x65, //
+    0x00, 0x00,
+];
+
+#[test]
+fn test_wasi_config_new() {
+    let config = WasiConfig::new();
+    assert!(config.is_ok());
+}
+
+#[test]
+fn test_wasi_config_default() {
+    let _config = WasiConfig::default();
+}
+
+#[test]
+fn test_wasi_config_inherit_stdio() {
+    let mut config = WasiConfig::new().unwrap();
+    config.inherit_stdio();
+}
+
+#[test]
+fn test_wasi_config_inherit_env() {
+    let mut config = WasiConfig::new().unwrap();
+    assert!(config.inherit_env().is_ok());
+}
+
+#[test]
+fn test_wasi_config_set_args() {
+    let mut config = WasiConfig::new().unwrap();
+    assert!(config.set_args(&["prog", "--flag"]).is_ok());
+}
+
+#[test]
+fn test_wasi_config_set_args_empty() {
+    let mut config = WasiConfig::new().unwrap();
+    assert!(config.set_args(&[]).is_ok());
+}
+
+#[test]
+fn test_wasi_config_set_args_interior_null() {
+    let mut config = WasiConfig::new().unwrap();
+    assert!(config.set_args(&["ok", "bad\0arg"]).is_err());
+}
+
+#[test]
+fn test_wasi_config_set_envs() {
+    let mut config = WasiConfig::new().unwrap();
+    assert!(config
+        .set_envs(&[("KEY1", "VALUE1"), ("KEY2", "VALUE2")])
+        .is_ok());
+}
+
+#[test]
+fn test_wasi_config_set_envs_interior_null() {
+    let mut config = WasiConfig::new().unwrap();
+    assert!(config.set_envs(&[("KEY", "bad\0value")]).is_err());
+}
+
+#[test]
+fn test_wasi_config_preopen_dir() {
+    let dir = std::env::temp_dir();
+    let mut config = WasiConfig::new().unwrap();
+    assert!(config.preopen_dir(dir.to_str().unwrap(), "/").is_ok());
+}
+
+#[test]
+fn test_wasi_config_preopen_dir_interior_null() {
+    let mut config = WasiConfig::new().unwrap();
+    assert!(config.preopen_dir("/tmp\0bad", "/").is_err());
+}
+
+#[test]
+fn test_module_with_wasi_import() {
+    let engine = Engine::new().unwrap();
+    let store = Store::new(&engine).unwrap();
+    let module = Module::new(&store, WASI_IMPORT_WASM);
+    assert!(module.is_ok());
+}
+
+#[test]
+fn test_instantiate_with_wasi_succeeds() {
+    let engine = Engine::new().unwrap();
+    let mut store = Store::new(&engine).unwrap();
+
+    let mut config = WasiConfig::new().unwrap();
+    config.set_args(&["prog"]).unwrap();
+    config.inherit_stdio();
+    store.set_wasi(config);
+
+    let module = Module::new(&store, WASI_IMPORT_WASM).unwrap();
+    let instance = Instance::new(&store, &module, &[]);
+    assert!(instance.is_ok());
+}
+
+#[test]
+fn test_set_wasi_twice_replaces() {
+    let engine = Engine::new().unwrap();
+    let mut store = Store::new(&engine).unwrap();
+
+    let mut first = WasiConfig::new().unwrap();
+    first.set_args(&["first"]).unwrap();
+    store.set_wasi(first);
+
+    let mut second = WasiConfig::new().unwrap();
+    second.set_args(&["second"]).unwrap();
+    store.set_wasi(second);
+
+    let module = Module::new(&store, WASI_IMPORT_WASM).unwrap();
+    let instance = Instance::new(&store, &module, &[]);
+    assert!(instance.is_ok());
+}
+
+#[test]
+fn test_unset_wasi() {
+    let engine = Engine::new().unwrap();
+    let mut store = Store::new(&engine).unwrap();
+
+    let config = WasiConfig::new().unwrap();
+    store.set_wasi(config);
+    store.unset_wasi();
+}

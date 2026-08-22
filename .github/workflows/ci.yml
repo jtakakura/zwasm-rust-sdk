@@ -35,11 +35,11 @@ jobs:
       - name: Build
         run: cargo build --all-targets
 
-      - name: Unit and integration tests
-        run: cargo test --test integration_sdk
+      - name: Tests
+        run: cargo test --all-targets
 
-      - name: E2E examples tests
-        run: cargo test --test examples_e2e
+      - name: Doc tests
+        run: cargo test --doc
 
   # Single required status check for the branch ruleset. Point the ruleset at
   # `ci-required`, not at the individual `test (...)` matrix legs, so the matrix

@@ -1,8 +1,15 @@
 # zwasm-sys
 
-zwasm-sys provides low-level Rust bindings to the zwasm C API.  
+zwasm-sys provides low-level Rust bindings to the zwasm C API.
 This crate offers FFI access to the zwasm WebAssembly runtime for use in higher-level Rust libraries and applications.
 
+Bindings are generated with `bindgen` from three headers that zwasm installs:
+
+| Header | Surface |
+|--------|---------|
+| `wasm.h` | The standard [wasm-c-api](https://github.com/WebAssembly/wasm-c-api) |
+| `zwasm.h` | zwasm extensions (fuel, memory limits, interruption, engine selection) |
+| `wasi.h` | WASI 0.1 host setup |
 
 ## Supported Rust Version
 
@@ -10,9 +17,12 @@ A recent stable Rust compiler is recommended. (Rust 2021 edition)
 
 ## Build and Link Requirements
 
-- Requires [Zig](https://ziglang.org/) to be installed and available in your PATH (used to build the zwasm C library).
-- The zwasm C API is built automatically as a submodule during the build process; no manual installation is needed.
+- Requires [Zig](https://ziglang.org/) 0.16.0 to be installed and available in your PATH (used to build the zwasm C library).
+- The zwasm C API is built automatically from the submodule during the build; no manual installation is needed.
+- The library is linked **statically**, so nothing has to be installed on the machine that runs your binary.
 - Supported platforms: **Unix-like systems (Linux, macOS)** only. Windows is not supported.
+
+On docs.rs there is no Zig toolchain, so the build script skips the Zig build and generates the bindings from the vendored headers instead.
 
 If you encounter build issues, please ensure Zig is installed and your environment supports building C libraries with Zig.
 
@@ -22,14 +32,17 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-zwasm-sys = "0.1"
+zwasm-sys = "0.2"
 ```
 
 ## Version Compatibility
 
 | zwasm-sys | zwasm C API |
 |-----------|-------------|
-| 0.1.0     | 1.11.0      |
+| 0.2.x     | 2.5.x       |
+| 0.1.x     | 1.11.x      |
+
+zwasm 2.0 replaced the custom C API with the standard wasm-c-api, so none of the 0.1 symbols carry over.
 
 ## ⚠️ Safety and Usage Notes
 
@@ -51,20 +64,24 @@ If you need a safe and ergonomic API, consider using or creating a wrapper crate
 
 ```rust
 use zwasm_sys::*;
+
 unsafe {
-		let module = zwasm_module_new(ptr, len);
-		// ... check for null, handle errors, etc.
+    let engine = wasm_engine_new();
+    let store = wasm_store_new(engine);
+    // ... check for null, build a wasm_byte_vec_t, call wasm_module_new, etc.
+    wasm_store_delete(store);
+    wasm_engine_delete(engine);
 }
 ```
 
 ## API Reference
 
-- [zwasm C API Documentation](https://github.com/zwasm/zwasm/blob/v1.11.1/book/en/src/c-api.md)
+- [zwasm C API Documentation](https://github.com/zwasm/zwasm/blob/v2.5.0/docs/reference/c_api.md)
 
 ## License
 
 - **Rust code in this repository (including zwasm-sys):** MIT License
-- **zwasm C API (submodule):** See [zwasm LICENSE](https://github.com/zwasm/zwasm/blob/v1.11.1/LICENSE) for details. You must comply with the license of the zwasm C library in addition to the MIT License for Rust code.
+- **zwasm C API (submodule):** See [zwasm LICENSE](https://github.com/zwasm/zwasm/blob/v2.5.0/LICENSE) for details. You must comply with the license of the zwasm C library in addition to the MIT License for Rust code.
 
 ## Contributing & Issue Reporting
 
@@ -74,4 +91,4 @@ Contributions, bug reports, and feature requests are welcome!
 - Pull requests are encouraged for improvements, documentation, or new tests.
 - For major changes, please open an issue first to discuss what you would like to change.
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for details.
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for details.
